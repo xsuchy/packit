@@ -8,6 +8,7 @@ from functools import lru_cache
 
 import requests
 
+from sourcegit.fed_mes_consume import Consumerino
 from sourcegit.sync import Synchronizer
 from sourcegit.watcher import Holyrood
 
@@ -43,6 +44,16 @@ class SourceGitAPI:
         with Synchronizer(self.pagure_user_token, self.pagure_package_token, self.pagure_fork_token) as sync:
             return sync.sync_using_fedmsg_dict(fedmsg_dict)
 
+    def keep_syncing_upstream_prs(self):
+        """
+        Watch Fedora messages and keep syncing upstream PRs downstream. This runs forever.
+
+        :return: None
+        """
+        topic = "org.fedoraproject.prod.github.pull_request.*"
+        c = Consumerino(topic)
+        c.consume(self.sync_upstream_pr_to_distgit)
+
     def process_ci_result(self, fedmsg_dict):
         """
         Take the CI result, figure out if it's related to source-git and if it is, report back to upstream
@@ -52,6 +63,13 @@ class SourceGitAPI:
         """
         h = Holyrood(self.github_token, self.pagure_user_token)
         h.process_pr(fedmsg_dict)
+
+    def keep_fwding_ci_results(self):
+        """
+        Watch Fedora messages and keep reporting CI results back to upstream PRs. This runs forever.
+
+        :return: None
+        """
 
     @property
     @lru_cache()
